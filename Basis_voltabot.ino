@@ -28,13 +28,13 @@
 #define motorLinksPin3  6     // IN3 on the ULN2003 driver 1
 #define motorLinksPin4  5     // IN4 on the ULN2003 driver 1
 
-
+#define schakelaar1Pin 2
 //Hieronder stel je in op welke pins de afstandssensor is aangesloten
 #define afstandssensorTrigPin 4
 #define afstandssensorEchoPin 3
 
 //Hieronder stel je in op welke pin de buzzer is aangesloten
-#define buzzerPin 2
+#define buzzerPin A0
 
 typedef struct td_Afstandssensor
 {
@@ -44,11 +44,20 @@ typedef struct td_Afstandssensor
   int obstakelTeller;
 } Afstandssensor;
 
+typedef struct td_Schakelaar
+{
+  int inputPin;
+  int aantalKeerIngedrukt;
+  int resetTellerNa;
+  int tijd;  
+} Schakelaar;
+
 typedef struct td_SensorActie
 {
   void (*actie)();
   boolean (*sensor)();
 } SensorActie;
+
   
 //Hieronder maak je de objecten die je gaat gebruiken in je programma
 const int stappen = 100;
@@ -58,7 +67,7 @@ AccelStepper motorLinks(HALFSTEP, motorLinksPin1, motorLinksPin3, motorLinksPin2
 SensorActie sensorActies[MAXCHECKS];
 Afstandssensor afstandVoor;
 MultiStepper VoltaBotWielen;
-
+volatile Schakelaar knop1;
 boolean controleerSensoren;
 
 void setupVoltaBot()
@@ -68,7 +77,14 @@ void setupVoltaBot()
   afstandVoor.obstakelTeller = 0;
   //Met de drempelwaarde stel je in van hoe ver weg de VoltaBot een obstakel moet detecteren. 20 betekent dichterbij dan 20cm.
   afstandVoor.drempelwaarde = 20;
-  
+
+  knop1.inputPin = schakelaar1Pin;
+  knop1.aantalKeerIngedrukt = 0;
+  knop1.resetTellerNa = 200;
+  knop1.tijd = 0;
+
+  pinMode(knop1.inputPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(knop1.inputPin), pinInterrupt1, RISING);
   pinMode(afstandVoor.trigPin, OUTPUT);
   pinMode(afstandVoor.echoPin, INPUT);
   
@@ -84,6 +100,20 @@ void setupVoltaBot()
 
   motorRechts.setMaxSpeed(SNELHEID);
   motorRechts.setAcceleration(0);
+}
+
+void pinInterrupt1()
+{
+  if(knop1.tijd - millis() < knop1.resetTellerNa)
+  {
+    knop1.aantalKeerIngedrukt++;
+    knop1.tijd = millis();   
+  }
+  else
+  {
+    knop1.aantalKeerIngedrukt = 1;
+    knop1.tijd = millis();
+  }
 }
 
 void checkSensors()
@@ -120,6 +150,26 @@ void voegSensorCheckToe(int plek, boolean (*check) (), void (*actie)())
   }
 }
 
+boolean checkKnop1keerIngedrukt()
+{
+  if(knop1.aantalKeerIngedrukt == 1)
+  {
+    knop1.aantalKeerIngedrukt = 0;
+    return true;
+  }
+  return false;
+}
+
+boolean checkKnop2OfMeerKeerIngedrukt()
+{
+  if(knop1.aantalKeerIngedrukt > 1)
+  {
+    knop1.aantalKeerIngedrukt = 0;
+    return true;
+  }
+  return false;
+}
+
 void piepEnOntwijkVoor()
 {
   setControleerSensoren(false);
@@ -142,6 +192,24 @@ void piep()
   digitalWrite(buzzerPin, HIGH);
   delay(500);
   digitalWrite(buzzerPin, LOW);
+  delay(100);
+}
+
+void wachtLang()
+{
+  piep();
+  piep();
+  delay(10000);
+  piep();
+  piep();
+}
+
+void wachtKort()
+{
+  piep();
+  delay(2000);
+  piep();
+  piep();
 }
 
 //Alle code in de functie 'setup()' wordt 1 keer uitgevoerd als je de Arduino aanzet, of nadat je op de reset knop heb gedrukt.
@@ -158,13 +226,14 @@ void setControleerSensoren(boolean aan)
 //De code in de functie 'loop()' wordt steeds herhaald. Als de laatste regel code is uitgevoerd begint hij weer van voor af aan.
 void loop() 
 {
-  
-
   setControleerSensoren(true);
   //Met delay laat je je hele programma een tijdje niks doen. Dit is hetzelfde als het blok: 'wacht' in Scratch. 
   //delay(1000) zorgt ervoor dat je programma precies 1 seconde wacht. Met delay(2000) wacht je programma 2 seconde en delay(500) een halve seconde.
   delay(1000);
   voegSensorCheckToe(0, &controleerObstakelVoor, &piep);
+  voegSensorCheckToe(1, &checkKnop1keerIngedrukt, &wachtKort);
+  voegSensorCheckToe(2, &checkKnop2OfMeerKeerIngedrukt, &wachtLang);
+  
   for(int i = 0;i < 20; i++)
   {
     rijAchteruit();
