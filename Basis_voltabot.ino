@@ -9,7 +9,7 @@
 #define STAPPEN_PER_RONDJE 4076
 
 //Maximum aantal sensor checks dat dit programma tegelijk kan uitvoeren
-#define MAXCHECKS 10
+#define MAXCHECKS 5
 
 //Het getal 8 is de code voor onze motor in de library die we gebruiken
 #define HALFSTEP 8
@@ -18,22 +18,23 @@
 //'#define motorRechtsPin1 4' de '1' achter 'motorRechtsPin' betekent 'IN1' op de motordriver. 
 //In dit voorbeeld zijn dus IN1 van de motordriver rechts en 'pin 4' op de Arduino met elkaar verbonden.
 //Als jij het anders hebt aangesloten kan je getallen hieronder veranderen.
-#define motorRechtsPin1 4     // IN1 on the ULN2003 driver 1
-#define motorRechtsPin2  5     // IN2 on the ULN2003 driver 1
-#define motorRechtsPin3  6     // IN3 on the ULN2003 driver 1
-#define motorRechtsPin4  7     // IN4 on the ULN2003 driver 1
+#define motorRechtsPin1  12     // IN1 on the ULN2003 driver 1
+#define motorRechtsPin2  11     // IN2 on the ULN2003 driver 1
+#define motorRechtsPin3  10     // IN3 on the ULN2003 driver 1
+#define motorRechtsPin4  9     // IN4 on the ULN2003 driver 1
 
-#define motorLinksPin1  0    // IN1 on the ULN2003 driver 1
-#define motorLinksPin2  1     // IN2 on the ULN2003 driver 1
-#define motorLinksPin3  2    // IN3 on the ULN2003 driver 1
-#define motorLinksPin4  3    // IN4 on the ULN2003 driver 1
+#define motorLinksPin1  8     // IN1 on the ULN2003 driver 1
+#define motorLinksPin2  7     // IN2 on the ULN2003 driver 1
+#define motorLinksPin3  6     // IN3 on the ULN2003 driver 1
+#define motorLinksPin4  5     // IN4 on the ULN2003 driver 1
+
 
 //Hieronder stel je in op welke pins de afstandssensor is aangesloten
-#define afstandssensorTrigPin 9
-#define afstandssensorEchoPin 8
+#define afstandssensorTrigPin 4
+#define afstandssensorEchoPin 3
 
 //Hieronder stel je in op welke pin de buzzer is aangesloten
-#define buzzerPin 10
+#define buzzerPin 2
 
 typedef struct td_Afstandssensor
 {
@@ -83,22 +84,27 @@ void setupVoltaBot()
 
   motorRechts.setMaxSpeed(SNELHEID);
   motorRechts.setAcceleration(0);
-
 }
 
 void checkSensors()
 {
   boolean (*check)();
   void (*actie)();
-  
+ 
   for(int i = 0; i < MAXCHECKS ; i++)
   {
     check = sensorActies[i].sensor;
     actie = sensorActies[i].actie;
-    
-    if(check())
+
+    if(check != 0)
     {
-      actie();
+      if(check())
+      {
+        if(actie != 0)
+        {
+          actie();
+        }
+      }
     }
   }
 }
@@ -112,6 +118,23 @@ void voegSensorCheckToe(int plek, boolean (*check) (), void (*actie)())
   {
       sensorActies[plek] = sa;
   }
+}
+
+void piepEnOntwijkVoor()
+{
+  setControleerSensoren(false);
+  digitalWrite(buzzerPin, HIGH);
+  delay(500);
+  digitalWrite(buzzerPin, LOW);
+  for(int i = 0; i < 20; i++)
+  {
+    rijAchteruit();
+  }
+  for(int i = 0; i < 20; i++)
+  {
+    draaiNaarLinks();
+  }
+  setControleerSensoren(true);
 }
 
 void piep()
@@ -135,33 +158,34 @@ void setControleerSensoren(boolean aan)
 //De code in de functie 'loop()' wordt steeds herhaald. Als de laatste regel code is uitgevoerd begint hij weer van voor af aan.
 void loop() 
 {
-  voegSensorCheckToe(controleerObstakelVoor, piep, 0);
+  
+
   setControleerSensoren(true);
   //Met delay laat je je hele programma een tijdje niks doen. Dit is hetzelfde als het blok: 'wacht' in Scratch. 
   //delay(1000) zorgt ervoor dat je programma precies 1 seconde wacht. Met delay(2000) wacht je programma 2 seconde en delay(500) een halve seconde.
   delay(1000);
-  
-  for(int i = 0;i < 100; i++)
+  voegSensorCheckToe(0, &controleerObstakelVoor, &piep);
+  for(int i = 0;i < 20; i++)
   {
     rijAchteruit();
   }
   delay(1000);
-
-  for(int i = 0;i < 50; i++)
+  voegSensorCheckToe(0, &controleerObstakelVoor, &piepEnOntwijkVoor);
+  for(int i = 0;i < 100; i++)
   {
     rijVooruit();
   }
-
-  for(int i = 0;i < 100; i++)
+  delay(1000);
+  voegSensorCheckToe(0, &controleerObstakelVoor, &piep);
+  for(int i = 0;i < 40; i++)
   {
-    draaiNaarLinks();
+    draaiNaarRechts();
   }
-
-  delay(500);
-
+  delay(1000);
+  voegSensorCheckToe(0, &controleerObstakelVoor, &piepEnOntwijkVoor);
   for(int i = 0;i < 100; i++)
   {
-    draaiNaarLinks();
+    rijVooruit();
   }
 }
 
@@ -174,6 +198,10 @@ boolean controleerObstakelVoor()
   return false;
 }
 
+void ontwijkVoor()
+{
+  
+}
 void rijVooruit()
 {
   long snelheden[] = {0- stappen, stappen};
@@ -240,19 +268,18 @@ void draaiNaarRechts()
  * Pas wanneer de functie 3 keer is aangeroepen EN hij 3 keer een obstakel heeft gezien geeft hij 'true' terug
  * 
  */
-boolean controleerObstakelOpAfstand(Afstandssensor sensor)
+boolean controleerObstakelOpAfstand(Afstandssensor &sensor)
 {
   //In de variabele obstakelTeller houden we bij hoe vaak we een obstakel achter elkaar hebben gedetecteerd.
   //Omdat hij static is, wordt de waarde onthouden en alleen de eerste keer op 0 gezet.
   
   //In de variabele afstand onthouden we de gemeten afstand.
   float afstand = meetAfstand(sensor);
- 
   if (afstand > 0 && afstand < sensor.drempelwaarde)
   {
     //Als de afstand groter dan 0 is en kleiner dan de minimale afstand hebben we een obstakel gedetecteerd.
     //We tellen 1 bij de obstakelTeller op.
-    sensor.obstakelTeller++;
+    sensor.obstakelTeller = sensor.obstakelTeller + 1;
   }
   else
   {
@@ -260,7 +287,7 @@ boolean controleerObstakelOpAfstand(Afstandssensor sensor)
     sensor.obstakelTeller = 0;
   }
   
-  if (sensor.obstakelTeller > 3)
+  if (sensor.obstakelTeller > 2)
   {
     //Wanneer we 3 keer een obstakel hebben gedetecteerd (en dus tussendoor niet op 0 is gezet) geven
     //we 'true' terug.
