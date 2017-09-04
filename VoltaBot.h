@@ -9,10 +9,12 @@
 #define VOORUIT 1
 #define ACHTERUIT 2
 
+typedef boolean (*CheckFunctie)();
+typedef void (*ActieFunctie)();
 typedef struct td_SensorActie
 {
-  void (*actie)();
-  boolean (*check)();
+  ActieFunctie actie;
+  CheckFunctie check;
 } SensorActie;
 
 class VoltaBot
@@ -21,8 +23,7 @@ class VoltaBot
     VoltaBot(int LinksIn1, int LinksIn2, int LinksIn3, int LinksIn4, int RechtsIn1, int RechtsIn2, int RechtsIn3, int RechtsIn4);
     void setupVoltaBot();
     void setStandaardSnelheid(int snelheid);
-    void voegSensorCheckToe(int plek, boolean (*check) (), void (*actie)());
-    
+    void voegSensorCheckToe(int plek, CheckFunctie, ActieFunctie);
     void rij();
     void rijVooruit();
     void rijAchteruit();

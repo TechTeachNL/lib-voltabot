@@ -28,7 +28,7 @@ void VoltaBot::setStandaardSnelheid(int snelheid)
   standaardSnelheid = snelheid;
 }
 
-void VoltaBot::voegSensorCheckToe(int plek, boolean (*check) (), void (*actie)())
+void VoltaBot::voegSensorCheckToe(int plek, CheckFunctie check, ActieFunctie actie)
 {
   if(plek < MAXSENSORCHECKS)
   {
