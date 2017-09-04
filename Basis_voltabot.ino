@@ -4,6 +4,8 @@
 
 //Hieronder stel je de standaard snelheid in
 #define SNELHEID 500
+#define VOORUIT 1
+#define ACHTERUIT 2
 
 //Wordt nog niet gebruikt
 #define STAPPEN_PER_RONDJE 4076
@@ -69,7 +71,7 @@ Afstandssensor afstandVoor;
 MultiStepper VoltaBotWielen;
 volatile Schakelaar knop1;
 boolean controleerSensoren;
-
+int richting;
 void setupVoltaBot()
 {
   afstandVoor.trigPin = afstandssensorTrigPin;
@@ -150,6 +152,17 @@ void voegSensorCheckToe(int plek, boolean (*check) (), void (*actie)())
   }
 }
 
+void veranderRichting()
+{
+  if(richting == VOORUIT)
+  {
+    richting = ACHTERUIT;
+  }
+  else if(richting == ACHTERUIT)
+  {
+    richting = VOORUIT;
+  }
+}
 boolean checkKnop1keerIngedrukt()
 {
   if(knop1.aantalKeerIngedrukt == 1)
@@ -234,11 +247,12 @@ void loop()
   voegSensorCheckToe(1, &checkKnop1keerIngedrukt, &wachtKort);
   voegSensorCheckToe(2, &checkKnop2OfMeerKeerIngedrukt, &wachtLang);
   
-  for(int i = 0;i < 20; i++)
+  for(int i = 0;i < 50; i++)
   {
     rijAchteruit();
   }
   delay(1000);
+  piep();
   voegSensorCheckToe(0, &controleerObstakelVoor, &piepEnOntwijkVoor);
   for(int i = 0;i < 100; i++)
   {
@@ -271,6 +285,19 @@ void ontwijkVoor()
 {
   
 }
+
+void beweeg(int richting)
+{
+  if(richting == VOORUIT)
+  {
+     rijVooruit();
+  }
+  else
+  {
+     rijAchteruit();
+  }
+}
+
 void rijVooruit()
 {
   long snelheden[] = {0- stappen, stappen};
