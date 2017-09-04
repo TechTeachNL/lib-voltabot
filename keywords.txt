@@ -1,0 +1,29 @@
+#######################################
+# Syntax Coloring Map For VoltaBot
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+VoltaBot	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+setupVoltaBot	KEYWORD2
+setStandaardSnelheid	KEYWORD2
+voegSensorCheckToe	KEYWORD2
+rij	KEYWORD2
+rijVooruit	KEYWORD2
+rijAchteruit	KEYWORD2
+draaiNaarLinks	KEYWORD2
+draaiNaarRechts	KEYWORD2
+veranderRichting	KEYWORD2
+setControleerSensoren	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+VOORUIT LITERAL1
+ACHTERUIT LITERAL1
